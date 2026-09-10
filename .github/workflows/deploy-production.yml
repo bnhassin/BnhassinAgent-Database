@@ -1,0 +1,92 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type DEPLOY to authorize production deployment'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: '3.12'
+  GOOGLE_CLOUD_PROJECT: ${{ vars.GCP_PROJECT_ID }}
+  GOOGLE_CLOUD_REGION: ${{ vars.GCP_REGION }}
+
+jobs:
+  production-preflight:
+    name: Production preflight
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    steps:
+      - name: Verify manual authorization
+        if: ${{ inputs.confirm != 'DEPLOY' }}
+        run: |
+          echo 'Production deployment requires the confirmation value DEPLOY.'
+          exit 1
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud with OIDC
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Validate production GCP configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${GOOGLE_CLOUD_PROJECT:?Set production variable GCP_PROJECT_ID}"
+          : "${GOOGLE_CLOUD_REGION:?Set production variable GCP_REGION}"
+          gcloud config set project "$GOOGLE_CLOUD_PROJECT"
+          gcloud services enable aiplatform.googleapis.com --project="$GOOGLE_CLOUD_PROJECT"
+          gcloud auth list
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Require deployable agent source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f requirements.txt || { echo 'requirements.txt is required for production.'; exit 1; }
+          find . -type f -name '*.py' -not -path './.git/*' | grep -q . || { echo 'Python agent source is required for production.'; exit 1; }
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m compileall -q .
+
+      - name: Run production tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -d tests ]]; then
+            python -m pytest -q tests
+          else
+            echo 'Production deployment blocked: add a tests/ suite before first production release.'
+            exit 1
+          fi
+
+      - name: Production deployment handoff
+        shell: bash
+        run: |
+          echo 'Production preflight passed.'
+          echo 'GitHub Environment protection rules are expected to approve this job before secrets are exposed.'
+          echo 'Final Agent Runtime deployment remains gated until the concrete BnhassinAgent entry point and deployment contract are committed.'
