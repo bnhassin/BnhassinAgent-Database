@@ -52,10 +52,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
-          cache-dependency-path: requirements.txt
 
-      - name: Install agent dependencies when present
+      - name: Install agent dependencies
         shell: bash
         run: |
           set -euo pipefail
@@ -81,17 +79,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python -m pip install pytest
           if [[ -f tests/test_smoke.py ]]; then
             python -m pytest -q tests/test_smoke.py
           elif [[ -d tests ]]; then
             python -m pytest -q tests
           else
-            echo "No tests directory yet; deployment gate remains source-only."
+            echo "No tests directory yet; deployment is blocked until staging tests exist."
+            exit 1
           fi
 
       - name: Deployment handoff
         shell: bash
         run: |
           echo "GCP authentication and staging validation succeeded."
-          echo "The final Agent Runtime deployment command is intentionally gated until the repository contains a concrete agent entry point."
-          echo "Recommended target: Vertex AI / Gemini Enterprise Agent Platform Agent Runtime."
+          echo "Final Agent Runtime deployment is intentionally gated until a concrete BnhassinAgent entry point is committed."
+          echo "Target: Vertex AI / Gemini Enterprise Agent Platform Agent Runtime."
