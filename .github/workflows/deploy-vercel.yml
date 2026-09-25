@@ -1,0 +1,50 @@
+name: Deploy OpenAI Agent to Vercel
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: vercel-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m compileall -q agent api
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel production environment
+        run: |
+          vercel pull             --yes             --environment=production             --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Build Vercel deployment
+        run: |
+          vercel build             --prod             --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Deploy prebuilt artifacts
+        run: |
+          vercel deploy             --prebuilt             --prod             --token="${{ secrets.VERCEL_TOKEN }}"
