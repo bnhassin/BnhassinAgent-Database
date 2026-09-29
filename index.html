@@ -1,17 +1,91 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Bnhassin Agent</title>
-  <style>
-    body{font-family:system-ui,sans-serif;max-width:720px;margin:4rem auto;padding:0 1rem;line-height:1.5}
-    code{background:#f3f3f3;padding:.15rem .35rem;border-radius:.25rem}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Data Detective — OpenAI Agents API</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#e9eef7;background:#0b0d12}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 20% 0%,#17213a 0,#0b0d12 38%);min-height:100vh}
+.wrap{max-width:1180px;margin:auto;padding:28px 18px 60px}.top{display:flex;justify-content:space-between;gap:18px;align-items:center;margin-bottom:24px}
+.brand{display:flex;gap:12px;align-items:center}.logo{width:40px;height:40px;border-radius:12px;background:#2563eb;display:grid;place-items:center;font-weight:800}.brand h1{font-size:20px;margin:0}.brand p{margin:2px 0 0;color:#8e99aa;font-size:12px}
+.grid{display:grid;grid-template-columns:360px 1fr;gap:18px}.card{background:#11151d;border:1px solid #252c38;border-radius:16px;padding:18px;box-shadow:0 16px 40px #0004}
+h2{font-size:18px;margin:0 0 12px}h3{font-size:15px}.muted{color:#8e99aa}.drop{border:1px dashed #3a4658;border-radius:14px;padding:24px;text-align:center;cursor:pointer;background:#0d1118}.drop input{display:none}
+button{border:0;border-radius:10px;padding:11px 15px;background:#2563eb;color:white;font-weight:700;cursor:pointer}button.secondary{background:#1b2230;color:#dbe5f5;border:1px solid #30394a}button:disabled{opacity:.45;cursor:not-allowed}
+textarea{width:100%;min-height:92px;background:#0c1017;color:#eef4ff;border:1px solid #30394a;border-radius:12px;padding:12px;resize:vertical}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.file{margin-top:10px;font-size:13px;color:#b9c5d7}
+.progress{margin:16px 0}.step{display:flex;gap:10px;align-items:flex-start;padding:8px 0;color:#6f7c90}.step.on{color:#dfe8f7}.dot{width:8px;height:8px;border-radius:50%;background:#394354;margin-top:6px}.on .dot{background:#3b82f6;box-shadow:0 0 14px #3b82f6}
+.chat{min-height:560px}.answer{white-space:pre-wrap;line-height:1.55;color:#dfe6f2}.findings{display:grid;gap:8px;padding-left:20px}.finding{margin:0}.caveat{color:#aab6c8}
+.chart{margin:16px 0;padding:14px;background:#0d1118;border:1px solid #242d3b;border-radius:12px}.chart svg{width:100%;height:220px;display:block}.chart-title{font-weight:700;margin-bottom:6px}.report{margin-top:16px}.report pre{white-space:pre-wrap;background:#0c1017;border-radius:12px;padding:14px;border:1px solid #242d3b;max-height:340px;overflow:auto}
+.samples{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.samples button{font-size:12px;padding:8px 10px}.footer{margin-top:18px;font-size:12px;color:#697589}
+@media(max-width:850px){.grid{grid-template-columns:1fr}.chat{min-height:auto}.top{align-items:flex-start}}
+</style>
 </head>
 <body>
-  <h1>Bnhassin Agent</h1>
-  <p>The Vercel deployment is online.</p>
-  <p>Session endpoint: <code>POST /api/session</code></p>
-</body>
-</html>
+<div class="wrap">
+<div class="top"><div class="brand"><div class="logo">DD</div><div><h1>Data Detective</h1><p>CSV analysis with the OpenAI Agents API</p></div></div><button class="secondary" id="reportBtn" disabled>Download report</button></div>
+<div class="grid">
+<aside class="card">
+<h2>1. Add your data</h2>
+<label class="drop">Drop a CSV here or tap to browse<input id="file" type="file" accept=".csv,text/csv"></label>
+<div class="file" id="fileName">No dataset selected.</div>
+<div class="samples"><button class="secondary" id="sampleSales">Try sample sales</button><button class="secondary" id="sampleWeb">Try sample web traffic</button></div>
+<hr style="border:0;border-top:1px solid #242b36;margin:20px 0">
+<h2>2. Ask a question</h2>
+<textarea id="question" placeholder="Example: Which month had the highest revenue, and what patterns should I investigate?"></textarea>
+<div class="actions"><button id="ask" disabled>Analyze dataset</button><button class="secondary" id="clear">New session</button></div>
+<div class="progress">
+<div class="step" id="s-upload"><span class="dot"></span><span>Upload securely</span></div>
+<div class="step" id="s-inspect"><span class="dot"></span><span>Inspect &amp; plan</span></div>
+<div class="step" id="s-compute"><span class="dot"></span><span>Run Python analysis</span></div>
+<div class="step" id="s-review"><span class="dot"></span><span>Review findings</span></div>
+<div class="step" id="s-report"><span class="dot"></span><span>Build report &amp; charts</span></div>
+</div>
+<div class="footer">Your OpenAI API key stays server-side. CSV analysis runs in an OpenAI-hosted code sandbox.</div>
+</aside>
+<main class="card chat">
+<h2 id="title">Your investigation</h2>
+<div id="empty" class="muted">Upload a CSV or try a sample, then ask a question. Follow-ups stay in the same OpenAI response chain.</div>
+<div id="result" hidden>
+<p id="answer" class="answer"></p><h3>Key findings</h3><ul id="findings" class="findings"></ul><h3>Caveats</h3><ul id="caveats" class="findings"></ul>
+<div id="charts"></div><div class="report"><h3>Downloadable report</h3><pre id="reportText"></pre></div>
+</div>
+</main>
+</div></div>
+<script>
+const $=s=>document.querySelector(s);
+let state={fileId:null,filename:null,csvBase64:null,previousResponseId:null,analysis:null};
+const steps={upload:$('#s-upload'),inspect:$('#s-inspect'),compute:$('#s-compute'),review:$('#s-review'),report:$('#s-report')};
+function setStep(name){Object.values(steps).forEach(x=>x.classList.remove('on'));if(steps[name])steps[name].classList.add('on')}
+function b64(buf){let bin='';const bytes=new Uint8Array(buf);for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(bin)}
+function setDataset(file,name,data){state={fileId:null,filename:name,csvBase64:data||null,previousResponseId:null,analysis:null};$('#fileName').textContent=name;$('#ask').disabled=false;$('#result').hidden=true;$('#empty').hidden=false;$('#reportBtn').disabled=true}
+$('#file').onchange=async e=>{const f=e.target.files[0];if(!f)return;setDataset(f,f.name,b64(await f.arrayBuffer()))}
+const sampleSales='month,region,product,revenue,units\n2026-01,North,Alpha,12400,310\n2026-01,South,Alpha,9800,245\n2026-02,North,Alpha,15100,350\n2026-02,South,Beta,11200,280\n2026-03,North,Beta,18400,410\n2026-03,South,Alpha,12600,300\n2026-04,North,Beta,21300,455\n2026-04,South,Alpha,14300,325\n2026-05,North,Alpha,17600,390\n2026-05,South,Beta,15800,360';
+const sampleWeb='date,channel,visits,conversions,revenue\n2026-05-01,Organic,1200,72,1800\n2026-05-02,Paid,980,49,1450\n2026-05-03,Organic,1430,100,2600\n2026-05-04,Social,870,39,980\n2026-05-05,Paid,1100,63,1710\n2026-05-06,Organic,1600,121,3100\n2026-05-07,Social,940,45,1120\n2026-05-08,Paid,1250,70,1890';
+$('#sampleSales').onclick=()=>setDataset(null,'sample-sales.csv',btoa(sampleSales));
+$('#sampleWeb').onclick=()=>setDataset(null,'sample-web.csv',btoa(sampleWeb));
+$('#clear').onclick=()=>{state={fileId:null,filename:null,csvBase64:null,previousResponseId:null,analysis:null};$('#fileName').textContent='No dataset selected.';$('#ask').disabled=true;$('#result').hidden=true;$('#empty').hidden=false;$('#reportBtn').disabled=true;Object.values(steps).forEach(x=>x.classList.remove('on'))};
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function drawChart(c){
+const w=720,h=220,p=42,vals=c.values||[],max=Math.max.apply(null,vals.concat([1])),step=(w-p*2)/Math.max(vals.length,1);
+let shapes='';
+if(c.type==='line'){
+let d='';vals.forEach((v,i)=>{const x=p+i*step+step*.5,y=h-p-(v/max)*(h-p*1.7);d+=(i?'L':'M')+' '+x+' '+y;shapes+='<circle cx="'+x+'" cy="'+y+'" r="4" fill="#60a5fa"/>'});shapes+='<path d="'+d+'" fill="none" stroke="#60a5fa" stroke-width="3"/>';
+}else{vals.forEach((v,i)=>{const bh=(v/max)*(h-p*1.7),x=p+i*step+step*.16,y=h-p-bh;shapes+='<rect x="'+x+'" y="'+y+'" width="'+step*.68+'" height="'+bh+'" rx="4" fill="#3b82f6"/>'})}
+let labels=(c.labels||[]).map((x,i)=>'<text x="'+(p+i*step+step*.5)+'" y="'+(h-p+17)+'" text-anchor="middle" font-size="10" fill="#8e99aa">'+esc(x)+'</text>').join('');
+return '<div class="chart"><div class="chart-title">'+esc(c.title)+'</div><svg viewBox="0 0 '+w+' '+h+'"><line x1="'+p+'" y1="'+(h-p)+'" x2="'+(w-p)+'" y2="'+(h-p)+'" stroke="#394354"/>'+shapes+labels+'</svg></div>'
+}
+function render(a){state.analysis=a;$('#empty').hidden=true;$('#result').hidden=false;$('#title').textContent=a.title||'Investigation';$('#answer').textContent=a.answer||'';$('#findings').innerHTML=(a.keyFindings||[]).map(x=>'<li class="finding">'+esc(x)+'</li>').join('');$('#caveats').innerHTML=(a.caveats||[]).map(x=>'<li class="finding caveat">'+esc(x)+'</li>').join('');$('#charts').innerHTML=(a.charts||[]).map(drawChart).join('');$('#reportText').textContent=a.reportMarkdown||'';$('#reportBtn').disabled=false}
+$('#ask').onclick=async()=>{
+const q=$('#question').value.trim();if(!q||!state.filename)return;$('#ask').disabled=true;setStep('upload');$('#result').hidden=true;
+try{
+const payload={question:q,filename:state.filename,fileId:state.fileId,csvBase64:state.csvBase64,previousResponseId:state.previousResponseId};
+const r=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+if(!r.ok)throw new Error('Request failed: '+r.status);
+const reader=r.body.getReader(),dec=new TextDecoder();let buf='';
+while(true){const x=await reader.read();if(x.done)break;buf+=dec.decode(x.value,{stream:true});const lines=buf.split('\n');buf=lines.pop();for(const line of lines){if(!line.trim())continue;const msg=JSON.parse(line);if(msg.type==='progress')setStep(msg.stage);else if(msg.type==='result'){state.fileId=msg.fileId;state.csvBase64=null;state.previousResponseId=msg.previousResponseId;render(msg.analysis)}else if(msg.type==='error')throw new Error(msg.error)}}}
+catch(e){alert(e.message);setStep(null)}finally{$('#ask').disabled=false}
+};
+$('#reportBtn').onclick=()=>{if(!state.analysis)return;const blob=new Blob([state.analysis.reportMarkdown||''],{type:'text/markdown'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(state.analysis.title||'data-detective-report').replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'.md';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)};
+</script>
+</body></html>
