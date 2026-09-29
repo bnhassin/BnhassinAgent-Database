@@ -45,7 +45,7 @@ textarea{width:100%;min-height:92px;background:#0c1017;color:#eef4ff;border:1px 
 </aside>
 <main class="card chat">
 <h2 id="title">Your investigation</h2>
-<div id="empty" class="muted">Upload a CSV or try a sample, then ask a question. Follow-ups stay in the same OpenAI response chain.</div>
+<div id="empty" class="muted">Upload a CSV or try a sample, then ask a question. Follow-ups stay in the same OpenAI Conversations session.</div>
 <div id="result" hidden>
 <p id="answer" class="answer"></p><h3>Key findings</h3><ul id="findings" class="findings"></ul><h3>Caveats</h3><ul id="caveats" class="findings"></ul>
 <div id="charts"></div><div class="report"><h3>Downloadable report</h3><pre id="reportText"></pre></div>
@@ -54,17 +54,17 @@ textarea{width:100%;min-height:92px;background:#0c1017;color:#eef4ff;border:1px 
 </div></div>
 <script>
 const $=s=>document.querySelector(s);
-let state={fileId:null,filename:null,csvBase64:null,previousResponseId:null,analysis:null};
+let state={fileId:null,filename:null,csvBase64:null,sessionId:null,analysis:null};
 const steps={upload:$('#s-upload'),inspect:$('#s-inspect'),compute:$('#s-compute'),review:$('#s-review'),report:$('#s-report')};
 function setStep(name){Object.values(steps).forEach(x=>x.classList.remove('on'));if(steps[name])steps[name].classList.add('on')}
 function b64(buf){let bin='';const bytes=new Uint8Array(buf);for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(bin)}
-function setDataset(file,name,data){state={fileId:null,filename:name,csvBase64:data||null,previousResponseId:null,analysis:null};$('#fileName').textContent=name;$('#ask').disabled=false;$('#result').hidden=true;$('#empty').hidden=false;$('#reportBtn').disabled=true}
+function setDataset(file,name,data){state={fileId:null,filename:name,csvBase64:data||null,sessionId:null,analysis:null};$('#fileName').textContent=name;$('#ask').disabled=false;$('#result').hidden=true;$('#empty').hidden=false;$('#reportBtn').disabled=true}
 $('#file').onchange=async e=>{const f=e.target.files[0];if(!f)return;setDataset(f,f.name,b64(await f.arrayBuffer()))}
 const sampleSales='month,region,product,revenue,units\n2026-01,North,Alpha,12400,310\n2026-01,South,Alpha,9800,245\n2026-02,North,Alpha,15100,350\n2026-02,South,Beta,11200,280\n2026-03,North,Beta,18400,410\n2026-03,South,Alpha,12600,300\n2026-04,North,Beta,21300,455\n2026-04,South,Alpha,14300,325\n2026-05,North,Alpha,17600,390\n2026-05,South,Beta,15800,360';
 const sampleWeb='date,channel,visits,conversions,revenue\n2026-05-01,Organic,1200,72,1800\n2026-05-02,Paid,980,49,1450\n2026-05-03,Organic,1430,100,2600\n2026-05-04,Social,870,39,980\n2026-05-05,Paid,1100,63,1710\n2026-05-06,Organic,1600,121,3100\n2026-05-07,Social,940,45,1120\n2026-05-08,Paid,1250,70,1890';
 $('#sampleSales').onclick=()=>setDataset(null,'sample-sales.csv',btoa(sampleSales));
 $('#sampleWeb').onclick=()=>setDataset(null,'sample-web.csv',btoa(sampleWeb));
-$('#clear').onclick=()=>{state={fileId:null,filename:null,csvBase64:null,previousResponseId:null,analysis:null};$('#fileName').textContent='No dataset selected.';$('#ask').disabled=true;$('#result').hidden=true;$('#empty').hidden=false;$('#reportBtn').disabled=true;Object.values(steps).forEach(x=>x.classList.remove('on'))};
+$('#clear').onclick=()=>{state={fileId:null,filename:null,csvBase64:null,sessionId:null,analysis:null};$('#fileName').textContent='No dataset selected.';$('#ask').disabled=true;$('#result').hidden=true;$('#empty').hidden=false;$('#reportBtn').disabled=true;Object.values(steps).forEach(x=>x.classList.remove('on'))};
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function drawChart(c){
 const w=720,h=220,p=42,vals=c.values||[],max=Math.max.apply(null,vals.concat([1])),step=(w-p*2)/Math.max(vals.length,1);
@@ -79,11 +79,11 @@ function render(a){state.analysis=a;$('#empty').hidden=true;$('#result').hidden=
 $('#ask').onclick=async()=>{
 const q=$('#question').value.trim();if(!q||!state.filename)return;$('#ask').disabled=true;setStep('upload');$('#result').hidden=true;
 try{
-const payload={question:q,filename:state.filename,fileId:state.fileId,csvBase64:state.csvBase64,previousResponseId:state.previousResponseId};
+const payload={question:q,filename:state.filename,fileId:state.fileId,csvBase64:state.csvBase64,sessionId:state.sessionId};
 const r=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
 if(!r.ok)throw new Error('Request failed: '+r.status);
 const reader=r.body.getReader(),dec=new TextDecoder();let buf='';
-while(true){const x=await reader.read();if(x.done)break;buf+=dec.decode(x.value,{stream:true});const lines=buf.split('\n');buf=lines.pop();for(const line of lines){if(!line.trim())continue;const msg=JSON.parse(line);if(msg.type==='progress')setStep(msg.stage);else if(msg.type==='result'){state.fileId=msg.fileId;state.csvBase64=null;state.previousResponseId=msg.previousResponseId;render(msg.analysis)}else if(msg.type==='error')throw new Error(msg.error)}}}
+while(true){const x=await reader.read();if(x.done)break;buf+=dec.decode(x.value,{stream:true});const lines=buf.split('\n');buf=lines.pop();for(const line of lines){if(!line.trim())continue;const msg=JSON.parse(line);if(msg.type==='progress')setStep(msg.stage);else if(msg.type==='result'){state.fileId=msg.fileId;state.csvBase64=null;state.sessionId=msg.sessionId;render(msg.analysis)}else if(msg.type==='error')throw new Error(msg.error)}}}
 catch(e){alert(e.message);setStep(null)}finally{$('#ask').disabled=false}
 };
 $('#reportBtn').onclick=()=>{if(!state.analysis)return;const blob=new Blob([state.analysis.reportMarkdown||''],{type:'text/markdown'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(state.analysis.title||'data-detective-report').replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'.md';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)};
