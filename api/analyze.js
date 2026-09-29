@@ -1,5 +1,5 @@
 import OpenAI, { toFile } from "openai";
-import { Agent, run, codeInterpreterTool } from "@openai/agents";
+import { Agent, OpenAIConversationsSession, run, codeInterpreterTool } from "@openai/agents";
 import { z } from "zod";
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -27,6 +27,7 @@ function cors(res) {
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
+
 function progress(res, stage, message) {
   res.write(JSON.stringify({ type: "progress", stage, message }) + "\n");
 }
@@ -78,6 +79,10 @@ export default async function handler(req, res) {
       outputType: Analysis
     });
 
+    const session = new OpenAIConversationsSession(
+      body.sessionId ? { conversationId: String(body.sessionId) } : undefined
+    );
+
     progress(res, "compute", "Running Python analysis in the OpenAI-hosted sandbox…");
     const input = [
       "Dataset file ID: " + fileId,
@@ -85,10 +90,7 @@ export default async function handler(req, res) {
       "Analyze the CSV directly with Python. Return the structured result only after the calculations are complete."
     ].join("\n");
 
-    const stream = await run(agent, input, {
-      stream: true,
-      ...(body.previousResponseId ? { previousResponseId: body.previousResponseId } : {})
-    });
+    const stream = await run(agent, input, { stream: true, session });
 
     for await (const event of stream) {
       if (event.type === "run_item_stream_event") {
@@ -99,11 +101,12 @@ export default async function handler(req, res) {
     await stream.completed;
 
     if (!stream.finalOutput) throw new Error("The agent did not produce a final analysis.");
+    const sessionId = await session.getSessionId();
     progress(res, "report", "Preparing charts and the downloadable report…");
     res.write(JSON.stringify({
       type: "result",
       fileId,
-      previousResponseId: stream.lastResponseId,
+      sessionId,
       analysis: stream.finalOutput
     }) + "\n");
     res.end();
