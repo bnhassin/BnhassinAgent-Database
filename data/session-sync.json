@@ -1,0 +1,20 @@
+{
+  "syncedAt": "2026-09-29T03:34:00+01:00",
+  "source": "OpenAI Demo API content session",
+  "project": {
+    "id": "proj_xGOGWTP7HMOrW69i9lqnyEKU",
+    "geography": "Global",
+    "members": 1,
+    "created": "2024-09-09",
+    "monthlySpendUsd": 0,
+    "residency": "Global",
+    "dataRetention": null
+  },
+  "vercel": {
+    "projectName": "bnhassin-agent-database",
+    "deployment": "bnhassin-agent-database-ig82i0ues-bnhassin-projects.vercel.app",
+    "repository": "bnhassin/BnhassinAgent-Database",
+    "commitSource": "main"
+  },
+  "note": "Non-secret session/project metadata synchronized from the current ChatGPT project context. No API keys or credentials are stored."
+}
