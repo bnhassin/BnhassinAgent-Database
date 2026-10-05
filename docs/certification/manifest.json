@@ -1,0 +1,9 @@
+{
+  "name": "Instructions Certificate Server",
+  "version": "0.1.0",
+  "purpose": "BnhassinAgent certification control-plane",
+  "source_basis": "Uploaded certification architecture document",
+  "remote_deployment": "Not performed; package is prepared for repository/Preview synchronization",
+  "secrets_included": false,
+  "deterministic_go_live_engine": "agent/certification/go-live.ts"
+}
