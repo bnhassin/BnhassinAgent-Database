@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import json
+import logging
 
 from agent.session import create_session
 
+logger = logging.getLogger(__name__)
+
 
 def handler(request):
+    """Create a managed session without returning internal exception details."""
     if getattr(request, "method", "GET") != "POST":
         return {
             "statusCode": 405,
@@ -25,9 +29,10 @@ def handler(request):
                 "status": getattr(session, "status", None),
             }),
         }
-    except Exception as exc:
+    except Exception:
+        logger.exception("OpenAI session creation failed")
         return {
             "statusCode": 500,
             "headers": {"Content-Type": "application/json"},
-            "body": json.dumps({"error": str(exc)}),
+            "body": json.dumps({"error": "Session creation failed"}),
         }
