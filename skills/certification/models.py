@@ -75,22 +75,20 @@ class CertificationSnapshot:
     repository: str
     commit_sha: str
     controls: tuple[ControlResult, ...]
-    production_deployed: bool = False
-    production_health_passed: bool = False
+    production_deployment_evidence: Evidence | None = None
+    production_health_evidence: Evidence | None = None
     evaluated_at: datetime = field(
         default_factory=lambda: datetime.now(timezone.utc)
     )
 
     def status(self) -> CertificationStatus:
-        """Return a conservative status; GO_LIVE requires production evidence."""
+        """GO_LIVE requires attributable deployment and health evidence."""
         mandatory = [control for control in self.controls if control.mandatory]
         if not mandatory or not self.repository.strip() or not self.commit_sha.strip():
             return CertificationStatus.NOT_READY
 
         for control in mandatory:
-            if control.status == ControlStatus.FAIL:
-                return CertificationStatus.BLOCKED
-            if control.status == ControlStatus.BLOCKED:
+            if control.status in (ControlStatus.FAIL, ControlStatus.BLOCKED):
                 return CertificationStatus.BLOCKED
 
         if any(
@@ -109,10 +107,23 @@ class CertificationSnapshot:
         ):
             return CertificationStatus.NOT_READY
 
-        if not self.production_deployed:
+        if self.production_deployment_evidence is None:
             return CertificationStatus.READY_FOR_GO_LIVE
 
-        if not self.production_health_passed:
+        deployment_ok = (
+            self.production_deployment_evidence.status == ControlStatus.PASS
+            and self.production_deployment_evidence.is_attributable_to(
+                control_id="PROD-001", commit_sha=self.commit_sha
+            )
+        )
+        health_ok = (
+            self.production_health_evidence is not None
+            and self.production_health_evidence.status == ControlStatus.PASS
+            and self.production_health_evidence.is_attributable_to(
+                control_id="HEALTH-001", commit_sha=self.commit_sha
+            )
+        )
+        if not deployment_ok or not health_ok:
             return CertificationStatus.DEGRADED
 
         return CertificationStatus.GO_LIVE
