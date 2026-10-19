@@ -30,6 +30,7 @@ jobs:
       - name: Validate JSON documentation config when present
         shell: bash
         run: |
+          set -euo pipefail
           if [[ -f docs.json ]]; then
             python -m json.tool docs.json >/dev/null
           else
@@ -40,36 +41,31 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if grep -RInE --exclude-dir=.git --exclude='*.lock' \
+          if grep -RInE --exclude-dir=.git --exclude='*.lock' --exclude='*.md' \
             '(sk-[A-Za-z0-9_-]{20,}|OPENAI_API_KEY[[:space:]]*[:=][[:space:]]*[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z_-]{20,})' .; then
             echo "Potential API credential found in tracked source. Use GitHub Secrets instead."
             exit 1
           fi
 
-      - name: Python syntax check when Python sources are present
-        shell: bash
-        run: |
-          set -euo pipefail
-          mapfile -t files < <(find . -type f -name '*.py' -not -path './.git/*')
-          if (( ${#files[@]} == 0 )); then
-            echo "No Python source files yet; syntax check skipped."
-            exit 0
-          fi
-          python -m compileall -q "${files[@]}"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-      - name: Python dependency smoke check when requirements exist
+      - name: Python syntax check
         shell: bash
+        run: python -m compileall -q agent api tests
+
+      - name: Install Python dependencies
         run: |
-          set -euo pipefail
-          if [[ ! -f requirements.txt ]]; then
-            echo "requirements.txt not present; dependency installation skipped."
-            exit 0
-          fi
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
 
       - name: Summary
         run: |
           echo "BnhassinAgent-Database CI passed."
-          echo "Default branch: main"
-          echo "Deployment is handled by staging and production workflows."
+          echo "Vercel Preview deployment is handled by deploy-vercel.yml."
+          echo "Production deployment is not performed by this workflow."
