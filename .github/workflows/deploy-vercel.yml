@@ -16,8 +16,10 @@ concurrency:
 jobs:
   preview:
     name: Build and deploy Vercel Preview
+    # Do not expose the Vercel token to forked pull requests.
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       VERCEL_ORG_ID: team_3Ky7h0T2xnT2GniUXFXfeoAz
       VERCEL_PROJECT_ID: prj_ublYxGYjnRUezYoMS5YmOX2A11bv
@@ -26,16 +28,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Set up Node.js (match Vercel project)
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
 
-      - name: Validate Vercel token is configured
+      - name: Validate project files and deployment credentials
         shell: bash
         run: |
           set -euo pipefail
           : "${VERCEL_TOKEN:?Add VERCEL_TOKEN as a GitHub Actions secret}"
+          : "${VERCEL_ORG_ID:?Vercel team ID is required}"
+          : "${VERCEL_PROJECT_ID:?Vercel project ID is required}"
+          test -f index.html
+          test -f api/analyze.js
+          node -e "JSON.parse(require('node:fs').readFileSync('package.json', 'utf8'))"
+          node -e "JSON.parse(require('node:fs').readFileSync('vercel.json', 'utf8'))"
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
@@ -47,4 +55,5 @@ jobs:
         run: vercel build --token="$VERCEL_TOKEN"
 
       - name: Deploy Preview only
+        # Intentionally omit --prod: this workflow must never publish to production.
         run: vercel deploy --prebuilt --token="$VERCEL_TOKEN"
