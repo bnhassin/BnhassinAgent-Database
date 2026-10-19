@@ -19,8 +19,8 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     env:
-      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+      VERCEL_ORG_ID: team_3Ky7h0T2xnT2GniUXFXfeoAz
+      VERCEL_PROJECT_ID: prj_ublYxGYjnRUezYoMS5YmOX2A11bv
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
       - name: Checkout
@@ -30,16 +30,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: package-lock.json
 
-      - name: Validate Vercel credentials are configured
+      - name: Validate Vercel token is configured
         shell: bash
         run: |
           set -euo pipefail
           : "${VERCEL_TOKEN:?Add VERCEL_TOKEN as a GitHub Actions secret}"
-          : "${VERCEL_ORG_ID:?Add VERCEL_ORG_ID as a repository variable}"
-          : "${VERCEL_PROJECT_ID:?Add VERCEL_PROJECT_ID as a repository variable}"
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
