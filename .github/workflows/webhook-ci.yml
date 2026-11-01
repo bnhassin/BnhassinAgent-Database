@@ -1,0 +1,52 @@
+name: Mintlify Webhook CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "webhook-service/**"
+      - ".github/workflows/webhook-ci.yml"
+  push:
+    branches: [feat/mintlify-webhook-gateway]
+    paths:
+      - "webhook-service/**"
+      - ".github/workflows/webhook-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: webhook-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: webhook-service
+
+jobs:
+  validate:
+    name: Test Mintlify webhook service
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Verify Node runtime
+        run: |
+          node --version
+          node -e "if (Number(process.versions.node.split('.')[0]) < 20) process.exit(1)"
+
+      - name: Validate JSON configuration
+        run: |
+          node -e "JSON.parse(require('node:fs').readFileSync('package.json', 'utf8'))"
+          node -e "JSON.parse(require('node:fs').readFileSync('vercel.json', 'utf8'))"
+
+      - name: Run webhook security tests
+        run: npm test
+
+      - name: Check patch whitespace
+        working-directory: .
+        run: git diff --check

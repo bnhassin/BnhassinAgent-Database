@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/webhooks/mintlify",
+      "destination": "/api/webhooks/mintlify"
+    },
+    {
+      "source": "/healthz",
+      "destination": "/api/health"
+    }
+  ]
+}
