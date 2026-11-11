@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>BnhassinAgent · Coinbase Wallet Demo</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0b1020;--panel:#121a2b;--line:#26334b;--muted:#9aa9c2;--text:#edf3ff;--accent:#75a7ff;--ok:#52d6a0;--warn:#f2c66d}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 85% 0,#1c3155 0,transparent 34%),var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+    main{max-width:1180px;margin:auto;padding:32px 22px 60px}.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+    h1{font-size:clamp(25px,4vw,38px);margin:6px 0}.sub,.muted{color:var(--muted)}.eyebrow{text-transform:uppercase;letter-spacing:.14em;font-size:11px;color:var(--accent);font-weight:700}
+    .pill{border:1px solid #6b5525;background:#332a16;color:var(--warn);padding:6px 10px;border-radius:99px;font-size:12px;font-weight:700}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:24px 0}.card{background:linear-gradient(145deg,#172238,var(--panel));border:1px solid var(--line);border-radius:16px;padding:18px;min-width:0}
+    .metric{font-size:clamp(23px,3vw,32px);font-weight:750;letter-spacing:-.04em;margin:8px 0}.label{color:var(--muted);font-size:13px}
+    .layout{display:grid;grid-template-columns:1.4fr 1fr;gap:14px}.section-title{font-size:17px;margin:0 0 14px}.row{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}.row:last-child{border:0}
+    .status{color:var(--ok);font-size:12px;font-weight:700}.blocked{color:var(--warn)}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}
+    button{border:1px solid #39527b;border-radius:10px;padding:10px 14px;background:#1b3154;color:var(--text);font-weight:650;cursor:pointer}button.secondary{background:transparent}
+    .notice{border-left:3px solid var(--warn);background:#292416;padding:12px 14px;border-radius:8px;color:#f6e6bf;margin:18px 0}
+    footer{margin-top:22px;color:var(--muted);font-size:12px}
+    @media(max-width:820px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.layout{grid-template-columns:1fr}}@media(max-width:430px){main{padding:22px 14px}.grid{gap:9px}.card{padding:14px}}
+  </style>
+</head>
+<body>
+<main data-mode="demo">
+  <header class="top">
+    <div><div class="eyebrow">BnhassinAgent · Wallet Console</div><h1>Coinbase Wallet Dashboard</h1><div class="sub">Prototype de pilotage · comité de validation Preview</div></div>
+    <span class="pill">DEMO FIXTURE · DONNÉES FICTIVES</span>
+  </header>
+  <div class="notice"><strong>Mode démonstration :</strong> les chiffres ci-dessous sont des exemples synthétiques. Aucun compte Coinbase n'est interrogé depuis cette page et aucune opération financière n'est possible.</div>
+  <section class="grid" aria-label="Indicateurs du portefeuille">
+    <article class="card"><div class="label">Valeur totale (exemple)</div><div class="metric">$1,250.00</div><div class="status">Fixture de démonstration</div></article>
+    <article class="card"><div class="label">Actifs suivis</div><div class="metric">6</div><div class="muted">Exemple de portefeuille</div></article>
+    <article class="card"><div class="label">Variation 7 jours</div><div class="metric">+2.4%</div><div class="muted">Non calculée sur un compte réel</div></article>
+    <article class="card"><div class="label">Alertes ouvertes</div><div class="metric">2</div><div class="blocked">Exemples non opérationnels</div></article>
+  </section>
+  <section class="layout">
+    <article class="card"><h2 class="section-title">Allocation — données fictives</h2>
+      <div class="row"><span>BTC</span><strong>35% · $437.50</strong></div><div class="row"><span>ETH</span><strong>25% · $312.50</strong></div>
+      <div class="row"><span>USDC</span><strong>20% · $250.00</strong></div><div class="row"><span>SOL</span><strong>12% · $150.00</strong></div><div class="row"><span>Autres</span><strong>8% · $100.00</strong></div>
+    </article>
+    <article class="card"><h2 class="section-title">État des workflows</h2>
+      <div class="row"><span>Portfolio Reader</span><span class="status">DEMO PASS</span></div>
+      <div class="row"><span>Profile / Posts Reader</span><span class="blocked">ADAPTER REQUIS</span></div>
+      <div class="row"><span>Risk Monitor</span><span class="blocked">À TESTER</span></div>
+      <div class="row"><span>Transaction Executor</span><span class="blocked">DÉSACTIVÉ</span></div>
+      <div class="actions"><button type="button" id="refresh">Actualiser la démo</button><button type="button" class="secondary" id="committee">Voir les contrôles</button></div>
+      <p id="feedback" class="muted" aria-live="polite">Aucune connexion externe active.</p>
+    </article>
+  </section>
+  <footer>Build de démonstration uniquement · Pas de clés, tokens, adresses privées ou données financières réelles · Production non autorisée.</footer>
+</main>
+<script>
+  const feedback=document.getElementById('feedback');
+  document.getElementById('refresh').addEventListener('click',()=>{feedback.textContent='Démo actualisée : les fixtures restent inchangées et aucune API externe n’est appelée.'});
+  document.getElementById('committee').addEventListener('click',()=>{feedback.textContent='Comité Preview : UI fixture présente · données réelles isolées · exécution financière désactivée · adaptateur Posts à fournir.'});
+</script>
+</body>
+</html>
