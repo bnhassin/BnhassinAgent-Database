@@ -46,7 +46,7 @@ jobs:
           required = [
               'data-mode="demo"',
               'DEMO FIXTURE',
-              'aucune opération financière',
+              'Aucune opération financière',
               'Transaction Executor',
               'DÉSACTIVÉ',
           ]
