@@ -1,0 +1,81 @@
+name: Coinbase Wallet Preview Committee
+
+on:
+  push:
+    branches:
+      - feat/coinbase-wallet-preview-dashboard
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "demo/coinbase-wallet/**"
+      - "docs/coinbase-wallet-preview-committee.md"
+      - ".github/workflows/coinbase-wallet-preview-committee.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coinbase-wallet-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dashboard-validation:
+    name: Dashboard artifact and safety checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Validate demo dashboard
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from html.parser import HTMLParser
+
+          path = Path("demo/coinbase-wallet/index.html")
+          assert path.is_file(), "Dashboard artifact missing"
+          content = path.read_text(encoding="utf-8")
+
+          class Parser(HTMLParser):
+              pass
+
+          Parser().feed(content)
+          required = [
+              'data-mode="demo"',
+              'DEMO FIXTURE',
+              'aucune opération financière',
+              'Transaction Executor',
+              'DÉSACTIVÉ',
+          ]
+          missing = [item for item in required if item not in content]
+          assert not missing, f"Missing demo safety markers: {missing}"
+          forbidden = ["BEGIN PRIVATE KEY", "seed phrase", "VERCEL_TOKEN="]
+          assert not any(value in content for value in forbidden), "Potential secret material found"
+          print("PASS: dashboard HTML and demo safety markers validated")
+          PY
+
+      - name: Committee policy gate
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          doc = Path("docs/coinbase-wallet-preview-committee.md").read_text(encoding="utf-8")
+          required = ["C1 — UI", "C2 — Data boundary", "C5 — Security", "C7 — Vercel Preview", "Out of scope / blocked"]
+          missing = [item for item in required if item not in doc]
+          assert not missing, f"Committee policy incomplete: {missing}"
+          print("PASS: Preview committee policy present")
+          PY
+
+      - name: Preview committee summary
+        if: always()
+        run: |
+          {
+            echo "## Coinbase Wallet Preview Committee"
+            echo "- Target: Preview only"
+            echo "- Dashboard: demo/coinbase-wallet/index.html"
+            echo "- Synthetic fixtures: required"
+            echo "- Financial execution: disabled"
+            echo "- Production: not authorized"
+          } >> "$GITHUB_STEP_SUMMARY"
