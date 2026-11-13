@@ -1,0 +1,60 @@
+name: PayPal Sandbox Preview Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "webhook-service/**"
+      - ".github/workflows/paypal-sandbox-preview.yml"
+  push:
+    branches:
+      - feat/paypal-sandbox-webhook-preview
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: paypal-sandbox-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Test PayPal Sandbox webhook service
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: webhook-service
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+      - name: Validate JavaScript syntax
+        run: npm run check
+      - name: Run unit tests
+        run: npm test
+      - name: Confirm Preview-only scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RInE --include='*.yml' --include='*.yaml' 'vercel[[:space:]].*--prod|vercel[[:space:]]+promote' .github/workflows/paypal-sandbox-preview.yml; then
+            echo "Production deployment command detected in PayPal Preview workflow."
+            exit 1
+          fi
+      - name: Write Preview validation summary
+        if: always()
+        run: |
+          {
+            echo "## PayPal Sandbox Preview Validation"
+            echo "- Ref: $GITHUB_REF"
+            echo "- Node: $(node --version)"
+            echo "- Application root: webhook-service/"
+            echo "- Target: Vercel Preview via Git integration"
+            echo "- Production deployment or promotion: not performed"
+            echo "- PayPal credentials: configure Sandbox-only values in Vercel Preview settings"
+          } >> "$GITHUB_STEP_SUMMARY"
