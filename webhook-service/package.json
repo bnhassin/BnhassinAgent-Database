@@ -1,1 +1,1 @@
-{"name":"bnhassinagent-paypal-webhook-service","version":"0.1.0","private":true,"type":"module","engines":{"node":">=22"},"scripts":{"test":"node --test","check":"node --check api/health.js && node --check api/webhooks/paypal.js && node --check lib/paypal.js"}}
+{"name":"bnhassinagent-paypal-webhook-service","version":"0.1.0","private":true,"type":"module","engines":{"node":"22.x"},"scripts":{"test":"node --test","check":"node --check api/health.js && node --check api/webhooks/paypal.js && node --check lib/paypal.js"}}
