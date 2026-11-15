@@ -1,0 +1,44 @@
+certification:
+  id: openrouter-control-center-preview
+  environment: preview
+  status: NOT_READY
+  production_scope: prohibited
+  gates:
+    - id: workspace-identity
+      check: workspace_id_matches_expected
+      evidence_required: true
+    - id: connector-health
+      check: authenticated_read_only_ping
+      evidence_required: true
+    - id: secret-hygiene
+      check: no_provider_secret_in_client_bundle_or_logs
+      evidence_required: true
+    - id: budget-integrity
+      check: key_budget_account_credits_and_usage_are_separate
+      evidence_required: true
+    - id: model-catalogue
+      check: live_model_catalogue_has_source_and_timestamp
+      evidence_required: true
+    - id: analytics-permissions
+      check: activity_scope_authorized_or_explicitly_unavailable
+      evidence_required: true
+    - id: agent-history
+      check: lifecycle_events_ingested_and_deduplicated
+      evidence_required: true
+    - id: report-quality
+      check: weekly_report_totals_reconcile_to_source
+      evidence_required: true
+    - id: tests
+      check: unit_integration_and_accessibility_tests_pass
+      evidence_required: true
+    - id: preview-deployment
+      check: preview_url_smoke_test_passes
+      evidence_required: true
+  evidence_record:
+    fields: [gate_id, result, checked_at, environment, verifier, source, evidence_url, notes]
+  pass_status: CERTIFIED_PREVIEW
+  failure_status: BLOCKED
+  rules:
+    - no_gate_pass_without_evidence
+    - unknown_is_not_pass
+    - production_go_live_requires_separate_explicit_authorization
