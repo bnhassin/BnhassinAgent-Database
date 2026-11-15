@@ -1,0 +1,45 @@
+workflow:
+  id: openrouter-weekly-performance
+  name: OpenRouter weekly performance report
+  version: 1
+  status: proposed
+  schedule:
+    cron: "0 9 * * 1"
+    timezone: Africa/Tunis
+  environment: preview
+  inputs:
+    workspace_id: "58d7fbab-436d-5e9a-a68d-1089afed0223"
+    reporting_window: previous_completed_7_days_utc
+  steps:
+    - id: verify-connection
+      action: read_only_ping
+      fail_closed: true
+    - id: collect-workspace-profile
+      action: read_workspace_profile
+      redact_secrets: true
+    - id: collect-model-catalogue
+      action: read_models_and_current_pricing
+      timestamp_required: true
+    - id: collect-activity
+      action: read_activity_analytics
+      management_scope_required: true
+      fallback: mark_unavailable_without_fabricating
+    - id: collect-agent-runs
+      action: query_agent_event_store
+    - id: calculate-kpis
+      metrics: [total_cost_usd, requests, input_tokens, output_tokens, average_latency_ms, p95_latency_ms, error_rate, model_mix, provider_mix, budget_remaining]
+    - id: compare-week
+      action: compare_previous_completed_week
+    - id: render-report
+      format: markdown_and_json
+      include: [executive_summary, spend, usage, model_provider_comparison, latency_errors, certification_changes, data_gaps, recommendations]
+    - id: deliver
+      destination: configured_internal_dashboard
+      notify: configured_report_subscribers
+  guardrails:
+    - never_write_provider_settings
+    - never_change_budgets_or_keys
+    - never_trigger_production_deployment
+    - do_not_include_prompt_or_completion_content
+    - label_missing_data_as_unavailable
+    - attach_source_and_checked_at_to_each_metric

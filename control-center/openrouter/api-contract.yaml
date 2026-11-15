@@ -1,0 +1,47 @@
+version: 1
+service: bnhassinagent-openrouter-control-center
+auth:
+  mode: session-authenticated-user
+  provider_credentials: server-side-only
+  scopes:
+    - workspace:read
+    - models:read
+    - activity:read
+    - agent-runs:read
+endpoints:
+  - method: GET
+    path: /api/control-center/openrouter/profile
+    returns: [workspace_id, workspace_name, connection_status, key_class, key_budget, account_credits, checked_at, expires_at]
+  - method: GET
+    path: /api/control-center/openrouter/models
+    returns: [model_id, provider, context_length, input_price, output_price, modality, fetched_at]
+  - method: GET
+    path: /api/control-center/openrouter/activity
+    query: [from, to, group_by, limit]
+    returns: [requests, prompt_tokens, completion_tokens, cost, status_counts, latency, fetched_at]
+  - method: GET
+    path: /api/control-center/agent-runs
+    query: [from, to, status, limit]
+    returns: [run_id, agent, model, provider, status, latency_ms, token_counts, cost, started_at, completed_at]
+  - method: GET
+    path: /api/control-center/certification
+    returns: [status, gates, evidence, checked_at]
+  - method: GET
+    path: /api/control-center/reports/weekly/latest
+    returns: [period, summary, spend, usage, model_mix, latency, errors, certification_delta, generated_at]
+events:
+  required:
+    - agent_run_started
+    - model_selected
+    - provider_response
+    - agent_run_completed
+    - agent_run_failed
+  fields: [event_id, occurred_at, run_id, agent, model, provider, status, latency_ms, input_tokens, output_tokens, cost_usd]
+  privacy: no_prompt_or_completion_content_by_default
+rules:
+  - All monetary values are USD unless explicitly labeled otherwise.
+  - Keep account credits separate from API key budgets and actual usage.
+  - Price records must include fetched_at and source.
+  - Never fabricate missing metrics; return null with data_status=unavailable.
+  - Never expose API keys or raw provider credentials.
+  - Management-only endpoints require an appropriately scoped management key; never silently elevate a regular key.
