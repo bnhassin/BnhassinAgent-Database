@@ -1,0 +1,46 @@
+name: Docker MCP Control Center Preview Checks
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/docker-mcp-portal/**"
+      - "api/docker/**"
+      - ".github/workflows/docker-mcp-preview.yml"
+  push:
+    branches: [feat/docker-mcp-control-center-preview]
+    paths:
+      - "apps/docker-mcp-portal/**"
+      - "api/docker/**"
+      - ".github/workflows/docker-mcp-preview.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-mcp-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  read-only-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/docker-mcp-portal/package.json
+
+      - name: Run Docker Hub contract tests
+        working-directory: apps/docker-mcp-portal
+        run: npm test
+
+      - name: Validate certification contract
+        run: node -e "const c=require('./apps/docker-mcp-portal/certification/preview-checks.json'); if(c.environment!=='preview'||c.policy.productionPromotionAllowed!==false||c.checks.some(x=>x.status!=='NOT_TESTED')) process.exit(1)"
