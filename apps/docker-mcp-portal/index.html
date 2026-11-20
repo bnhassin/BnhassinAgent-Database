@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Docker MCP Control Center · BnhassinAgent</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,system-ui,sans-serif;background:#0b1118;color:#e8eef5}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% 0%,#172c43,#0b1118 42%);min-height:100vh}
+main{max-width:1120px;margin:auto;padding:30px 18px 64px}.top{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}
+.brand{display:flex;gap:13px;align-items:center}.whale{width:48px;height:48px;border-radius:14px;background:#1d63ed;display:grid;place-items:center;font-size:25px}
+h1{font-size:24px;margin:0}h2{font-size:17px;margin:0 0 12px}p{color:#9fb0c2;line-height:1.5}.sub{font-size:13px;margin:4px 0}
+.pill{font-size:11px;border:1px solid #38516b;border-radius:999px;padding:6px 10px;color:#b8d7f6}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;margin-top:22px}.card{background:#111c28;border:1px solid #26384a;border-radius:16px;padding:18px;min-width:0}
+.wide{grid-column:1/-1}.metric{font-size:27px;font-weight:700;margin:5px 0}.muted{color:#8295a8;font-size:12px}
+.row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #253545}.row:last-child{border:0}
+button{background:#2563eb;color:white;border:0;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer}button:disabled{opacity:.5}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:10px 8px;border-bottom:1px solid #253545}th{color:#91a8bd;font-weight:600}
+.status{font-size:11px;padding:4px 8px;border-radius:99px;background:#263647;color:#c6d4e1;white-space:nowrap}.PASS{background:#123d31;color:#a3f0d0}.FAIL,.BLOCKED{background:#4a2027;color:#ffc1c8}.NOT_TESTED,.PENDING,.NOT_READY{background:#493c1c;color:#f5d99b}
+a{color:#83baff}code{color:#a7d0ff}.foot{margin-top:20px;color:#7e91a5;font-size:12px}
+@media(max-width:720px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}h1{font-size:20px}}
+</style>
+</head>
+<body><main>
+<header class="top">
+ <div class="brand"><div class="whale">🐳</div><div><h1>Docker MCP Control Center</h1><p class="sub">BnhassinAgent · isolated Preview workspace</p></div></div>
+ <span class="pill">READ-ONLY · PREVIEW</span>
+</header>
+<section class="grid">
+ <article class="card">
+  <h2>Docker Hub identity</h2><div id="profile" class="muted">Loading public profile…</div>
+  <p><a href="https://hub.docker.com/u/bnhassin/" target="_blank" rel="noreferrer">Open Docker Hub profile ↗</a></p>
+ </article>
+ <article class="card">
+  <h2>Repository inventory</h2><div id="repo-count" class="metric">—</div><div class="muted">Public repositories returned by Docker Hub</div>
+ </article>
+ <article class="card wide">
+  <div class="row"><h2>Repositories</h2><button id="refresh">Refresh read-only data</button></div>
+  <div id="repos" class="muted">Waiting for Docker Hub…</div>
+ </article>
+ <article class="card">
+  <h2>MCP Gateway</h2><div id="gateway" class="row"><span>Remote endpoint</span><span class="status NOT_TESTED">NOT TESTED</span></div>
+  <p class="muted">Configure the account-specific Streamable HTTP Gateway URL in the Vercel Preview environment. The value is never displayed by this portal.</p>
+  <p class="muted">Local Toolkit example: <code>docker mcp gateway run --profile bnhassin-preview</code></p>
+ </article>
+ <article class="card">
+  <h2>Agentic Sandbox</h2><div class="metric">NOT TESTED</div>
+  <p class="muted">Cloud access and lifecycle APIs have not been verified. This portal does not create, pause, resume, or delete sandboxes.</p>
+  <a href="https://agentic-platform.docker.com/" target="_blank" rel="noreferrer">Open Docker Agentic Platform ↗</a>
+ </article>
+ <article class="card wide">
+  <h2>Preview certification</h2><div id="overall" class="row"><span>Overall readiness</span><span class="status NOT_READY">NOT_READY</span></div>
+  <div id="checks" class="muted">Loading checks…</div>
+ </article>
+</section>
+<p class="foot">No Docker Hub writes, image pushes, registry changes, secret display, Sandbox lifecycle mutations, or Production operations are available in this Preview portal.</p>
+</main>
+<script type="module">
+const el=(id)=>document.getElementById(id);
+const badge=(status)=>'<span class="status '+status+'">'+status+'</span>';
+async function load(){
+  el("profile").textContent="Loading public profile…";
+  try{
+    const [p,r,c]=await Promise.all([
+      fetch("/api/docker/profile").then(x=>{if(!x.ok)throw Error("Profile API "+x.status);return x.json()}),
+      fetch("/api/docker/repositories?page=1&page_size=25").then(x=>{if(!x.ok)throw Error("Repository API "+x.status);return x.json()}),
+      fetch("/api/docker/certification").then(x=>x.json())
+    ]);
+    el("profile").innerHTML='<div class="metric">'+escapeHtml(p.profile.username)+'</div><div>'+escapeHtml(p.profile.fullName||"Docker Hub user")+'</div><div class="muted">'+escapeHtml(p.profile.location||"Location not provided")+'</div>';
+    el("repo-count").textContent=String(r.count);
+    el("repos").innerHTML=r.repositories.length?'<table><thead><tr><th>Repository</th><th>Visibility</th><th>Pulls</th><th>Stars</th><th>Updated</th></tr></thead><tbody>'+r.repositories.map(x=>'<tr><td><a href="https://hub.docker.com/r/'+encodeURIComponent(x.namespace)+'/'+encodeURIComponent(x.name)+'" target="_blank" rel="noreferrer">'+escapeHtml(x.name)+'</a><div class="muted">'+escapeHtml(x.description)+'</div></td><td>'+(x.isPrivate?"Private":"Public")+'</td><td>'+Number(x.pullCount).toLocaleString()+'</td><td>'+Number(x.starCount).toLocaleString()+'</td><td>'+escapeHtml(x.lastUpdated?new Date(x.lastUpdated).toLocaleDateString():"—")+'</td></tr>').join("")+'</tbody></table>':'No public repositories returned.';
+    const gateway=c.checks.find(x=>x.id==="DOCKER_MCP.GATEWAY_CONFIGURED");
+    el("gateway").innerHTML='<span>Remote endpoint</span>'+badge(gateway.status);
+    el("overall").innerHTML='<span>Overall readiness</span>'+badge(c.overallStatus);
+    el("checks").innerHTML=c.checks.map(x=>'<div class="row"><span>'+escapeHtml(x.id)+'</span>'+badge(x.status)+'</div>').join("");
+  }catch(error){el("profile").textContent="Unable to load Docker Hub data: "+error.message;el("repos").textContent="Read-only upstream request failed."}
+}
+function escapeHtml(value){return String(value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+el("refresh").addEventListener("click",load);load();
+</script>
+</body></html>
