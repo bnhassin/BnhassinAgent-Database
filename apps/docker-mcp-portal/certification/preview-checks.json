@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "environment": "preview",
+  "policy": {
+    "readOnly": true,
+    "productionPromotionAllowed": false,
+    "notTestedCountsAsPass": false,
+    "secretsReturnedToClient": false
+  },
+  "checks": [
+    { "id": "DOCKER_HUB.PUBLIC_PROFILE_READ", "required": true, "status": "NOT_TESTED" },
+    { "id": "DOCKER_HUB.PUBLIC_REPOSITORIES_READ", "required": true, "status": "NOT_TESTED" },
+    { "id": "DOCKER_MCP.GATEWAY_CONFIGURED", "required": true, "status": "NOT_TESTED" },
+    { "id": "DOCKER_MCP.PROTOCOL_HANDSHAKE", "required": true, "status": "NOT_TESTED" },
+    { "id": "DOCKER_SANDBOX.CLOUD_ACCESS", "required": true, "status": "NOT_TESTED" },
+    { "id": "DOCKER_SANDBOX.LIFECYCLE", "required": true, "status": "NOT_TESTED" },
+    { "id": "DOCKER_SECURITY.READ_ONLY", "required": true, "status": "NOT_TESTED" },
+    { "id": "DOCKER_CI.PREVIEW_CHECKS", "required": true, "status": "NOT_TESTED" }
+  ]
+}
