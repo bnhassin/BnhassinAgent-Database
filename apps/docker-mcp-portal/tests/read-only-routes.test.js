@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import profileHandler from "../../../../api/docker/profile.js";
-import repositoriesHandler from "../../../../api/docker/repositories.js";
-import certificationHandler from "../../../../api/docker/certification.js";
+import profileHandler from "../../../api/docker/profile.js";
+import repositoriesHandler from "../../../api/docker/repositories.js";
+import certificationHandler from "../../../api/docker/certification.js";
 
 function responseRecorder() {
   return {
